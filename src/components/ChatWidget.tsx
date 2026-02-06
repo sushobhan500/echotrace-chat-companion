@@ -1,23 +1,24 @@
 import { useState, useRef, useEffect } from "react";
-import { MessageCircle, X, Send, Sparkles } from "lucide-react";
+import { MessageCircle, X, Send, Sparkles, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import ChatMessage from "./ChatMessage";
-import { chatbotResponses } from "@/data/sampleConversations";
+import { useChat } from "@/hooks/useChat";
 
-interface Message {
-  id: string;
-  role: 'user' | 'assistant';
-  content: string;
-}
+const suggestedQueries = [
+  "Analyze escalation patterns",
+  "Why do refunds happen?",
+  "Show positive outcomes",
+  "Give me a summary"
+];
 
 const ChatWidget = () => {
   const [isOpen, setIsOpen] = useState(false);
-  const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
-  const [isTyping, setIsTyping] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  
+  const { messages, isLoading, sendMessage, addGreeting, clearMessages } = useChat();
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -25,69 +26,21 @@ const ChatWidget = () => {
 
   useEffect(() => {
     scrollToBottom();
-  }, [messages, isTyping]);
+  }, [messages, isLoading]);
 
   useEffect(() => {
     if (isOpen && messages.length === 0) {
-      // Send greeting when chat opens for the first time
-      setTimeout(() => {
-        setMessages([{
-          id: Date.now().toString(),
-          role: 'assistant',
-          content: chatbotResponses.greeting[0]
-        }]);
-      }, 500);
+      setTimeout(() => addGreeting(), 500);
     }
     if (isOpen) {
       inputRef.current?.focus();
     }
-  }, [isOpen]);
-
-  const generateResponse = (userMessage: string): string => {
-    const lowerMessage = userMessage.toLowerCase();
-    
-    if (lowerMessage.includes('escalation') || lowerMessage.includes('escalate')) {
-      return chatbotResponses.escalation_analysis;
-    }
-    if (lowerMessage.includes('refund') || lowerMessage.includes('return')) {
-      return chatbotResponses.refund_analysis;
-    }
-    if (lowerMessage.includes('positive') || lowerMessage.includes('success') || lowerMessage.includes('good')) {
-      return chatbotResponses.positive_analysis;
-    }
-    if (lowerMessage.includes('pattern') || lowerMessage.includes('summary') || lowerMessage.includes('analyze') || lowerMessage.includes('insight')) {
-      return chatbotResponses.pattern_summary;
-    }
-    if (lowerMessage.includes('hello') || lowerMessage.includes('hi') || lowerMessage.includes('hey')) {
-      return chatbotResponses.greeting[1];
-    }
-    
-    return chatbotResponses.fallback;
-  };
+  }, [isOpen, messages.length, addGreeting]);
 
   const handleSend = () => {
-    if (!input.trim()) return;
-
-    const userMessage: Message = {
-      id: Date.now().toString(),
-      role: 'user',
-      content: input.trim()
-    };
-
-    setMessages(prev => [...prev, userMessage]);
+    if (!input.trim() || isLoading) return;
+    sendMessage(input);
     setInput("");
-    setIsTyping(true);
-
-    // Simulate AI thinking time
-    setTimeout(() => {
-      const response = generateResponse(userMessage.content);
-      setIsTyping(false);
-      setMessages(prev => [...prev, {
-        id: (Date.now() + 1).toString(),
-        role: 'assistant',
-        content: response
-      }]);
-    }, 1000 + Math.random() * 1000);
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -97,12 +50,10 @@ const ChatWidget = () => {
     }
   };
 
-  const suggestedQueries = [
-    "Analyze escalation patterns",
-    "Why do refunds happen?",
-    "Show positive outcomes",
-    "Give me a summary"
-  ];
+  const handleClear = () => {
+    clearMessages();
+    setTimeout(() => addGreeting(), 300);
+  };
 
   return (
     <>
@@ -140,9 +91,16 @@ const ChatWidget = () => {
           </div>
           <div>
             <h3 className="font-semibold text-primary-foreground">EchoTrace AI</h3>
-            <p className="text-xs text-primary-foreground/80">Conversational Intelligence</p>
+            <p className="text-xs text-primary-foreground/80">Powered by Gemini</p>
           </div>
           <div className="ml-auto flex items-center gap-2">
+            <button 
+              onClick={handleClear}
+              className="p-1.5 rounded-lg hover:bg-white/10 transition-colors"
+              title="Clear chat"
+            >
+              <Trash2 className="w-4 h-4 text-primary-foreground/80" />
+            </button>
             <span className="w-2 h-2 rounded-full animate-pulse" style={{ background: 'hsl(142 69% 58%)' }} />
             <span className="text-xs text-primary-foreground/80">Online</span>
           </div>
@@ -157,7 +115,7 @@ const ChatWidget = () => {
               content={message.content}
             />
           ))}
-          {isTyping && (
+          {isLoading && messages[messages.length - 1]?.role !== 'assistant' && (
             <ChatMessage role="assistant" content="" isTyping />
           )}
           <div ref={messagesEndRef} />
@@ -192,10 +150,11 @@ const ChatWidget = () => {
               onKeyPress={handleKeyPress}
               placeholder="Ask about conversation patterns..."
               className="flex-1 bg-secondary rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 placeholder:text-muted-foreground"
+              disabled={isLoading}
             />
             <Button
               onClick={handleSend}
-              disabled={!input.trim() || isTyping}
+              disabled={!input.trim() || isLoading}
               size="icon"
               variant="hero"
               className="rounded-lg"
