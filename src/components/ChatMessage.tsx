@@ -1,5 +1,6 @@
 import { cn } from "@/lib/utils";
 import { Bot, User } from "lucide-react";
+import ReactMarkdown from 'react-markdown';
 
 interface ChatMessageProps {
   role: 'user' | 'assistant';
@@ -47,13 +48,19 @@ const ChatMessage = ({ role, content, isTyping }: ChatMessageProps) => {
             <span className="w-2 h-2 rounded-full bg-current animate-typing" style={{ animationDelay: '0.4s' }} />
           </div>
         ) : (
-          <div className="text-sm leading-relaxed whitespace-pre-wrap">
-            {content.split(/(\*\*[^*]+\*\*)/).map((part, i) => {
-              if (part.startsWith('**') && part.endsWith('**')) {
-                return <strong key={i} className="font-semibold">{part.slice(2, -2)}</strong>;
-              }
-              return <span key={i}>{part}</span>;
-            })}
+          <div className="text-sm leading-relaxed prose prose-sm prose-invert max-w-none">
+            <ReactMarkdown
+              components={{
+                p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
+                ul: ({ children }) => <ul className="list-disc list-inside mb-2 space-y-1">{children}</ul>,
+                ol: ({ children }) => <ol className="list-decimal list-inside mb-2 space-y-1">{children}</ol>,
+                li: ({ children }) => <li className="text-sm">{children}</li>,
+                strong: ({ children }) => <strong className="font-semibold text-primary">{children}</strong>,
+                code: ({ children }) => <code className="bg-background/50 px-1 py-0.5 rounded text-xs">{children}</code>,
+              }}
+            >
+              {content}
+            </ReactMarkdown>
           </div>
         )}
       </div>

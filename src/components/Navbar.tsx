@@ -1,10 +1,13 @@
-import { Activity, Menu, X } from "lucide-react";
+import { Activity, Menu, X, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/hooks/useAuth";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 const Navbar = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const { user, loading, signInWithGoogle, signOut } = useAuth();
 
   const navLinks = [
     { label: "Features", href: "#features" },
@@ -12,6 +15,13 @@ const Navbar = () => {
     { label: "Pricing", href: "#pricing" },
     { label: "Documentation", href: "#docs" },
   ];
+
+  const getUserInitials = () => {
+    if (user?.email) {
+      return user.email.charAt(0).toUpperCase();
+    }
+    return "U";
+  };
 
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 glass">
@@ -42,12 +52,33 @@ const Navbar = () => {
 
           {/* Desktop CTA */}
           <div className="hidden md:flex items-center gap-3">
-            <Button variant="ghost" size="sm">
-              Sign In
-            </Button>
-            <Button variant="hero" size="sm">
-              Get Started
-            </Button>
+            {loading ? (
+              <div className="w-8 h-8 rounded-full bg-secondary animate-pulse" />
+            ) : user ? (
+              <div className="flex items-center gap-3">
+                <Avatar className="w-8 h-8 border border-border">
+                  <AvatarImage src={user.user_metadata?.avatar_url} />
+                  <AvatarFallback className="bg-primary text-primary-foreground text-sm">
+                    {getUserInitials()}
+                  </AvatarFallback>
+                </Avatar>
+                <span className="text-sm text-muted-foreground">
+                  {user.email?.split('@')[0]}
+                </span>
+                <Button variant="ghost" size="sm" onClick={signOut}>
+                  <LogOut className="w-4 h-4" />
+                </Button>
+              </div>
+            ) : (
+              <>
+                <Button variant="ghost" size="sm" onClick={signInWithGoogle}>
+                  Sign In
+                </Button>
+                <Button variant="hero" size="sm" onClick={signInWithGoogle}>
+                  Get Started
+                </Button>
+              </>
+            )}
           </div>
 
           {/* Mobile Menu Button */}
@@ -63,7 +94,7 @@ const Navbar = () => {
         <div
           className={cn(
             "md:hidden overflow-hidden transition-all duration-300",
-            isMobileMenuOpen ? "max-h-64 pb-6" : "max-h-0"
+            isMobileMenuOpen ? "max-h-80 pb-6" : "max-h-0"
           )}
         >
           <div className="flex flex-col gap-4 pt-4">
@@ -78,12 +109,34 @@ const Navbar = () => {
               </a>
             ))}
             <div className="flex flex-col gap-2 pt-4 border-t border-border">
-              <Button variant="ghost" size="sm" className="justify-start">
-                Sign In
-              </Button>
-              <Button variant="hero" size="sm">
-                Get Started
-              </Button>
+              {user ? (
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Avatar className="w-8 h-8 border border-border">
+                      <AvatarImage src={user.user_metadata?.avatar_url} />
+                      <AvatarFallback className="bg-primary text-primary-foreground text-sm">
+                        {getUserInitials()}
+                      </AvatarFallback>
+                    </Avatar>
+                    <span className="text-sm text-muted-foreground">
+                      {user.email?.split('@')[0]}
+                    </span>
+                  </div>
+                  <Button variant="ghost" size="sm" onClick={signOut}>
+                    <LogOut className="w-4 h-4 mr-2" />
+                    Sign Out
+                  </Button>
+                </div>
+              ) : (
+                <>
+                  <Button variant="ghost" size="sm" className="justify-start" onClick={signInWithGoogle}>
+                    Sign In with Google
+                  </Button>
+                  <Button variant="hero" size="sm" onClick={signInWithGoogle}>
+                    Get Started
+                  </Button>
+                </>
+              )}
             </div>
           </div>
         </div>
